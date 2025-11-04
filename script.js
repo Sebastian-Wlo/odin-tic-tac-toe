@@ -3,9 +3,9 @@ const gameBoard = (() => {
 
   const resetBoard = () => {
     board = [
-      [null, null, null],
-      [null, null, null],
-      [null, null, null],
+      ["", "", ""],
+      ["", "", ""],
+      ["", "", ""],
     ];
   };
 
@@ -13,11 +13,37 @@ const gameBoard = (() => {
     board[coordY][coordX] = symbol;
   };
 
+  const arrAsString = (arr) => arr.reduce((acc, currVal) => acc + currVal, "");
+
   const getBoard = () => board;
-
   const getField = ([row, col]) => board[row][col];
+  const getRowStr = (row) => arrAsString(board[row]);
+  const getColStr = (col) => arrAsString(board.map((row) => row[col]));
+  const getDiagFwdStr = () => {
+    let diagArr = [];
+    for (let n = 0; n < board.length; n++) {
+      diagArr.push(board[n][n]);
+    }
+    return arrAsString(diagArr);
+  };
+  const getDiagBckStr = () => {
+    let diagArr = [];
+    for (let n = board.length - 1; n >= 0; n--) {
+      diagArr.push(board[n][board.length - 1 - n]);
+    }
+    return arrAsString(diagArr);
+  };
 
-  return { playerMove, resetBoard, getBoard, getField };
+  return {
+    playerMove,
+    resetBoard,
+    getBoard,
+    getField,
+    getRowStr,
+    getColStr,
+    getDiagFwdStr,
+    getDiagBckStr,
+  };
 })();
 
 const createPlayer = (symbol, name) => {
@@ -25,75 +51,78 @@ const createPlayer = (symbol, name) => {
 };
 
 const gameController = (() => {
+  const symbolRegex = /^(O{1,3}|X{1,3})$/;
   let gameInProgress = false;
   let turn = null;
   let players = [];
 
   const checkRow = (board, rowNum) => {
-    const firstSymbol = board[rowNum][0];
-
-    if (!firstSymbol) return false;
-
-    for (let col in board[rowNum]) {
-      if (board[rowNum][col] !== firstSymbol) {
-        return false;
-      }
+    const rowString = gameBoard.getRowStr(rowNum);
+    if (symbolRegex.test(rowString)) {
+      return rowString.length === 3 ? rowString[0] : true;
     }
-    return firstSymbol;
+    return false;
   };
 
-  const checkColumn = (board, colNum) => {
-    const firstSymbol = board[0][colNum];
-
-    if (!firstSymbol) return false;
-
-    for (let row in board) {
-      if (board[row][colNum] !== firstSymbol) {
-        return false;
-      }
+  const checkCol = (board, colNum) => {
+    const colString = gameBoard.getColStr(colNum);
+    if (symbolRegex.test(colString)) {
+      return colString.length === 3 ? colString[0] : true;
     }
-    return firstSymbol;
+    return false;
   };
 
   const checkDiagonalFwd = (board) => {
-    const firstSymbol = board[0][0];
-
-    if (!firstSymbol) return false;
-
-    for (let cell = 0; cell < board.length; cell++) {
-      if (board[cell][cell] !== firstSymbol) return false;
+    const diagFStr = gameBoard.getDiagFwdStr();
+    if (symbolRegex.test(diagFStr)) {
+      return diagFStr.length === 3 ? diagFStr[0] : true;
     }
-    return firstSymbol;
+    return false;
   };
-  const checkDiagonalBack = (board) => {
-    const firstSymbol = board[board.length - 1][0];
-    if (!firstSymbol) return false;
 
-    for (let cell = board.length - 1; cell >= 0; cell--) {
-      if (board[cell][board.length - 1 - cell] !== firstSymbol) return false;
+  const checkDiagonalBack = (board) => {
+    const diagBStr = gameBoard.getDiagBckStr();
+    if (symbolRegex.test(diagBStr)) {
+      return diagBStr.length === 3 ? diagBStr[0] : true;
     }
-    return firstSymbol;
+    return false;
   };
 
   const checkforWin = () => {
     const currentBoard = gameBoard.getBoard();
-    let winner;
+    let possibleWins = 0;
     // check horizontal (rows)
     for (let row in currentBoard) {
-      winner = checkRow(currentBoard, row);
-      if (winner) return winner;
+      const outcome = checkRow(currentBoard, row);
+      console.log("checking row outcome", outcome, typeof outcome);
+      if (outcome) {
+        if (outcome === "O" || outcome === "X") return outcome;
+        else possibleWins++;
+      }
     }
     // check vertical (columns)
     for (let col in currentBoard[0]) {
-      winner = checkColumn(currentBoard, col);
-      if (winner) return winner;
+      const outcome = checkCol(currentBoard, col);
+      if (outcome) {
+        if (outcome === "O" || outcome === "X") return outcome;
+        else possibleWins++;
+      }
     }
     // check diagonal (forwards)
-    winner = checkDiagonalFwd(currentBoard);
-    if (winner) return winner;
+    const outcomeF = checkDiagonalFwd();
+    if (outcomeF) {
+      if (outcomeF === "O" || outcomeF === "X") return outcomeF;
+      else possibleWins++;
+    }
     // check diagonal (backwards)
-    winner = checkDiagonalBack(currentBoard);
-    if (winner) return winner;
+    const outcomeB = checkDiagonalBack();
+    if (outcomeB) {
+      if (outcomeB === "O" || outcomeB === "X") return outcomeB;
+      else possibleWins++;
+    }
+
+    console.log("possibleWins:", possibleWins);
+    if (possibleWins === 0) return false;
   };
 
   function startGame() {
@@ -112,16 +141,21 @@ const gameController = (() => {
   }
 
   const placeMarker = ([y, x]) => {
-    if (gameBoard.getField([y, x]) === null && gameInProgress) {
+    if (gameBoard.getField([y, x]) === "" && gameInProgress) {
       gameBoard.playerMove(players[Math.floor(turn % 2)].symbol, [y, x]);
       turn++;
       uiController.displayBoard(turn, players[Math.floor(turn % 2)].name);
-      if (checkforWin()) {
+      console.log("checkForWin:", checkforWin());
+      const winner = checkforWin();
+      if (winner) {
         gameInProgress = false;
         uiController.declareWinner(
           players[Math.floor((turn - 1) % 2)].name,
           turn
         );
+      } else if (winner === false) {
+        gameInProgress = false;
+        uiController.declareDraw();
       }
     }
   };
@@ -173,6 +207,11 @@ const uiController = (() => {
     uiController.setResetBtn("Play Again?", false);
   };
 
+  const declareDraw = () => {
+    document.querySelector("#turn-info").textContent = "Draw!";
+    uiController.setResetBtn("Play Again?", false);
+  };
+
   const displayBoard = (turn, playerName) => {
     const currentBoard = gameBoard.getBoard().map((x) => x);
 
@@ -203,13 +242,14 @@ const uiController = (() => {
     const resetBtn = document.querySelector("#reset-btn");
     resetBtn.textContent = text;
     resetBtn.disabled = disabled;
-  }
+  };
   return {
     displayStartScreen,
     displayBoard,
     declareWinner,
+    declareDraw,
     getInputFieldValue,
-    setResetBtn
+    setResetBtn,
   };
 })();
 
