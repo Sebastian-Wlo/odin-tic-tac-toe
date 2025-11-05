@@ -94,7 +94,7 @@ const gameController = (() => {
     // check horizontal (rows)
     for (let row in currentBoard) {
       const outcome = checkRow(currentBoard, row);
-      console.log("checking row outcome", outcome, typeof outcome);
+      //console.log("checking row outcome", outcome, typeof outcome);
       if (outcome) {
         if (outcome === "O" || outcome === "X") return outcome;
         else possibleWins++;
@@ -121,7 +121,7 @@ const gameController = (() => {
       else possibleWins++;
     }
 
-    console.log("possibleWins:", possibleWins);
+    //console.log("possibleWins:", possibleWins);
     if (possibleWins === 0) return false;
   };
 
@@ -145,7 +145,7 @@ const gameController = (() => {
       gameBoard.playerMove(players[Math.floor(turn % 2)].symbol, [y, x]);
       turn++;
       uiController.displayBoard(turn, players[Math.floor(turn % 2)].name);
-      console.log("checkForWin:", checkforWin());
+      //console.log("checkForWin:", checkforWin());
       const winner = checkforWin();
       if (winner) {
         gameInProgress = false;
@@ -162,7 +162,7 @@ const gameController = (() => {
 
   const displayStartScreen = () => {
     uiController.displayStartScreen();
-    document.querySelector("#turn-info").textContent = "Start new game";
+    document.querySelector("#turn-info").textContent = "Start a new game";
     uiController.setResetBtn(" ", true);
     document.querySelector("#reset-btn").addEventListener("click", () => {
       gameController.displayStartScreen();
@@ -174,7 +174,7 @@ const gameController = (() => {
 
 const makeButton = (content, [row, col]) => {
   const btn = `<button id="btn-${row}-${col}" class="board-btn">${
-    content ? content : " "
+    content ? content : ""
   }</button>`;
   return btn;
 };
